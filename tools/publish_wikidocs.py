@@ -2,6 +2,7 @@
 
     export WIKIDOCS_TOKEN=...      # 위키독스 계정설정 > API 토큰 (저장소에 커밋하지 말 것)
     python tools/publish_wikidocs.py --src build/wikidocs                  # 새 책(비공개) 만들고 업로드
+    python tools/publish_wikidocs.py --src ../ai-wikidocs --open --cover docs/assets/cover.png  # 공개 + 표지
     python tools/publish_wikidocs.py --src build/wikidocs --book-id 12345  # 기존 책 갱신
 
 동작
@@ -66,6 +67,7 @@ def main() -> None:
     ap.add_argument("--src", default="build/wikidocs", help="export_wikidocs.py 출력 폴더")
     ap.add_argument("--book-id", type=int, default=None, help="기존 책 ID (없으면 새 책 생성)")
     ap.add_argument("--open", action="store_true", help="새 책을 공개(Y)로 생성 (기본: 비공개)")
+    ap.add_argument("--cover", default=None, help="새 책 표지 이미지 (예: docs/assets/cover.png)")
     ap.add_argument("--only", default=None, help="이 문자열이 들어간 파일만 업로드 (시험용)")
     ap.add_argument("--delay", type=float, default=0.3, help="요청 간 대기 (초)")
     opts = ap.parse_args()
@@ -92,8 +94,13 @@ def main() -> None:
         readme = (src / "README.md").read_text(encoding="utf-8").splitlines()
         subject = readme[0].lstrip("# ").strip()
         summary = "\n".join(readme[1:]).strip()
-        book = api.call("POST", "/books/create/", data={
-            "subject": subject, "summary": summary, "open_yn": "Y" if opts.open else "N", "book_type": "B"})
+        data = {"subject": subject, "summary": summary, "open_yn": "Y" if opts.open else "N", "book_type": "B"}
+        if opts.cover:
+            with open(opts.cover, "rb") as f:
+                book = api.call("POST", "/books/create/", data=data,
+                                files={"image": (Path(opts.cover).name, f, "image/png")})
+        else:
+            book = api.call("POST", "/books/create/", data=data)
         book_id = book["id"]
         print(f"새 책 생성: {book_id} ({'공개' if opts.open else '비공개'})")
     state["book_id"] = book_id
