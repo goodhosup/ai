@@ -6,5 +6,6 @@ __pycache__/
 .cache/
 .claude/settings.local.json
 .wikidocs-state.json
-*token*
+*.token
+wikidocs_token*
 .env
